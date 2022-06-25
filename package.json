@@ -1,0 +1,23 @@
+{
+  "name": "chrome-scrapping-extension",
+  "version": "1.0.0",
+  "description": "En este modulo vamos a hacer una extension de chrome con fines educativos",
+  "main": "index.js",
+  "scripts": {
+    "dev": "esbuild ./src/sw.js --bundle --watch --outdir=./dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pablopelardas/scrapping-01.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/pablopelardas/scrapping-01/issues"
+  },
+  "homepage": "https://github.com/pablopelardas/scrapping-01#readme",
+  "dependencies": {
+    "esbuild": "^0.14.47"
+  }
+}
