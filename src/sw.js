@@ -1,3 +1,1 @@
-import { constanteRandom } from "./modulo"
-
-chrome.action.onClicked.addListener(() => console.log('clicked',constanteRandom))
+chrome.action.onClicked.addListener(() => console.log('Hello World'))

@@ -4,7 +4,7 @@
   "description": "En este modulo vamos a hacer una extension de chrome con fines educativos",
   "main": "index.js",
   "scripts": {
-    "dev": "esbuild ./src/sw.js --bundle --watch --outdir=./dist"
+    "dev": "node ./config/esbuild.js"
   },
   "repository": {
     "type": "git",
