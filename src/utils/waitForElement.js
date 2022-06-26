@@ -5,9 +5,9 @@ export const waitForElement = selector => new Promise((resolve, reject) => {
     const interval = setInterval(() => {
         if ($(selector)){
             clearInterval(interval);
-            resolve();
+            resolve($(selector));
         }
     }, 10);
 
-    setTimeout(() => {reject();}, 12);
+    setTimeout(() => {reject();}, 5500);
 });
