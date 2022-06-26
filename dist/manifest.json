@@ -7,5 +7,10 @@
   },
   "action": {
     "deffault_title": "Click Me"
-  }
+  },
+  "permissions": [
+    "tabs",
+    "scripting",
+    "activeTab"
+  ]
 }

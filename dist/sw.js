@@ -1,7 +1,8 @@
-(() => {
-  // src/modulo.js
-  var constanteRandom = Math.ceil(Math.random() * 100);
-
-  // src/sw.js
-  chrome.action.onClicked.addListener(() => console.log("clicked", constanteRandom));
-})();
+// src/sw.js
+chrome.action.onClicked.addListener((tab) => {
+  console.log("console");
+  chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    files: ["./scripts/scrappingLinkedin.js"]
+  });
+});
