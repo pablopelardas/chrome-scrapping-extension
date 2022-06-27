@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import { autoScroll } from '../utils/autoScroll';
 import {waitForElement} from '../utils/waitForElement';
 import { selectors } from './scrapper.config';
@@ -9,33 +10,51 @@ const resolveIsReady = async () => {
     await waitForElement(main.profileImage);
     await autoScroll();
 
-
-    console.log('termine de scrollear');
 };
 
 const scrap = async () => {
     await waitForElement(main.contactInfoA);
-    const response = await axios('https://www.linkedin.com/voyager/api/identity/profiles/lucaspose/profileContactInfo',{
+    let response;
+    const user = window.location.href.split('/')[4];
+    console.log(user);
+    response = await axios(`https://www.linkedin.com/voyager/api/identity/profiles/${user}/profileContactInfo`,{
         headers:{
             'csrf-token': 'ajax:8655455109788390906'
         }
     });
-    console.log(response.data);
 
     const arrayExperience = [];
     //Experiencia
     $$(main.generalContainer('experience')).forEach(element => {
-        arrayExperience.push($('span[aria-hidden="true"]', element).textContent);
+        const fields =($$('span[aria-hidden="true"]', element));
+        let experience = {
+            title: fields[0]?.innerText || '',
+            enterprise: fields[1]?.innerText || '',
+            period: fields[2]?.innerText.split('·')[0] || '',
+            duration: fields[2]?.innerText.split('·')[1] || '',
+            location: fields[3]?.innerText || '',
+            description: $(main.descriptions, element)?.innerText || '',
+        };
+        arrayExperience.push(experience);
     });
-    console.log(arrayExperience);
 
     const arrayEducation = [];
     //Educación
     $$(main.generalContainer('education')).forEach(element => {
-        arrayEducation.push($('span[aria-hidden="true"]', element).textContent);
+        let education = {
+            title: $('span[aria-hidden="true"]', element).innerText,
+            description: $(main.descriptions, element)?.innerText,
+        };
+        arrayEducation.push(education);
     });
-    console.log(arrayEducation);
 
+    // eslint-disable-next-line no-undef
+    const port = chrome.runtime.connect({name: 'scrapper'});
+    port.postMessage({
+        contactInfo: response.data,
+        experience: arrayExperience,
+        education: arrayEducation
+    });
 };
 
 const start = async () => {

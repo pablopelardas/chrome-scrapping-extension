@@ -7,5 +7,5 @@ export const autoScroll = () => new Promise(resolve =>{
             clearInterval(intervalId);
             resolve();
         } 
-    },150);
+    },50);
 });

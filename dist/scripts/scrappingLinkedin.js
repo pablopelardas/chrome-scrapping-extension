@@ -1467,7 +1467,7 @@
         clearInterval(intervalId);
         resolve();
       }
-    }, 150);
+    }, 50);
   });
 
   // src/utils/selectors.js
@@ -1493,7 +1493,8 @@
       profileImage: ".pv-top-card-profile-picture__image",
       contactInfoA: "#top-card-text-details-contact-info",
       contactInfoS: ".pv-profile-section__section-info",
-      generalContainer: (idRef) => `#${idRef} ~ .pvs-list__outer-container > ul > li > div`
+      generalContainer: (idRef) => `#${idRef} ~ .pvs-list__outer-container > ul > li > div`,
+      descriptions: ".pv-shared-text-with-see-more"
     }
   };
 
@@ -1503,26 +1504,46 @@
   var resolveIsReady = async () => {
     await waitForElement(main.profileImage);
     await autoScroll();
-    console.log("termine de scrollear");
   };
   var scrap = async () => {
     await waitForElement(main.contactInfoA);
-    const response = await (0, import_axios.default)("https://www.linkedin.com/voyager/api/identity/profiles/lucaspose/profileContactInfo", {
+    let response;
+    const user = window.location.href.split("/")[4];
+    console.log(user);
+    response = await (0, import_axios.default)(`https://www.linkedin.com/voyager/api/identity/profiles/${user}/profileContactInfo`, {
       headers: {
         "csrf-token": "ajax:8655455109788390906"
       }
     });
-    console.log(response.data);
     const arrayExperience = [];
     $$(main.generalContainer("experience")).forEach((element) => {
-      arrayExperience.push($('span[aria-hidden="true"]', element).textContent);
+      var _a, _b, _c, _d, _e, _f;
+      const fields = $$('span[aria-hidden="true"]', element);
+      let experience = {
+        title: ((_a = fields[0]) == null ? void 0 : _a.innerText) || "",
+        enterprise: ((_b = fields[1]) == null ? void 0 : _b.innerText) || "",
+        period: ((_c = fields[2]) == null ? void 0 : _c.innerText.split("\xB7")[0]) || "",
+        duration: ((_d = fields[2]) == null ? void 0 : _d.innerText.split("\xB7")[1]) || "",
+        location: ((_e = fields[3]) == null ? void 0 : _e.innerText) || "",
+        description: ((_f = $(main.descriptions, element)) == null ? void 0 : _f.innerText) || ""
+      };
+      arrayExperience.push(experience);
     });
-    console.log(arrayExperience);
     const arrayEducation = [];
     $$(main.generalContainer("education")).forEach((element) => {
-      arrayEducation.push($('span[aria-hidden="true"]', element).textContent);
+      var _a;
+      let education = {
+        title: $('span[aria-hidden="true"]', element).innerText,
+        description: (_a = $(main.descriptions, element)) == null ? void 0 : _a.innerText
+      };
+      arrayEducation.push(education);
     });
-    console.log(arrayEducation);
+    const port = chrome.runtime.connect({ name: "scrapper" });
+    port.postMessage({
+      contactInfo: response.data,
+      experience: arrayExperience,
+      education: arrayEducation
+    });
   };
   var start = async () => {
     await resolveIsReady();

@@ -68,8 +68,8 @@
     return pd || (proto = getProto(obj)) && getPropertyDescriptor(proto, prop);
   }
   var _slice = [].slice;
-  function slice(args, start, end) {
-    return _slice.call(args, start, end);
+  function slice(args, start2, end) {
+    return _slice.call(args, start2, end);
   }
   function override(origFunc, overridedFactory) {
     return overridedFactory(origFunc);
@@ -1273,11 +1273,11 @@
         }
       }
       const [idx, filterFunction] = keyPaths.reduce(([prevIndex, prevFilterFn], keyPath) => {
-        const index2 = idxByName[keyPath];
+        const index = idxByName[keyPath];
         const value = indexOrCrit[keyPath];
         return [
-          prevIndex || index2,
-          prevIndex || !index2 ? combine(prevFilterFn, index2 && index2.multi ? (x) => {
+          prevIndex || index,
+          prevIndex || !index ? combine(prevFilterFn, index && index.multi ? (x) => {
             const prop = getByKeyPath(x, keyPath);
             return isArray(prop) && prop.some((item) => equals(value, item));
           } : (x) => equals(value, getByKeyPath(x, keyPath))) : prevFilterFn
@@ -1306,8 +1306,8 @@
     toCollection() {
       return new this.db.Collection(new this.db.WhereClause(this));
     }
-    orderBy(index2) {
-      return new this.db.Collection(new this.db.WhereClause(this, isArray(index2) ? `[${index2.join("+")}]` : index2));
+    orderBy(index) {
+      return new this.db.Collection(new this.db.WhereClause(this, isArray(index) ? `[${index.join("+")}]` : index));
     }
     reverse() {
       return this.toCollection().reverse();
@@ -1558,20 +1558,20 @@
   function getIndexOrStore(ctx, coreSchema) {
     if (ctx.isPrimKey)
       return coreSchema.primaryKey;
-    const index2 = coreSchema.getIndexByKeyPath(ctx.index);
-    if (!index2)
+    const index = coreSchema.getIndexByKeyPath(ctx.index);
+    if (!index)
       throw new exceptions.Schema("KeyPath " + ctx.index + " on object store " + coreSchema.name + " is not indexed");
-    return index2;
+    return index;
   }
   function openCursor(ctx, coreTable, trans) {
-    const index2 = getIndexOrStore(ctx, coreTable.schema);
+    const index = getIndexOrStore(ctx, coreTable.schema);
     return coreTable.openCursor({
       trans,
       values: !ctx.keysOnly,
       reverse: ctx.dir === "prev",
       unique: !!ctx.unique,
       query: {
-        index: index2,
+        index,
         range: ctx.range
       }
     });
@@ -1737,13 +1737,13 @@
               index: getIndexOrStore(ctx, coreTable.schema),
               range: ctx.range
             }
-          }).then((count3) => Math.min(count3, ctx.limit));
+          }).then((count2) => Math.min(count2, ctx.limit));
         } else {
-          var count2 = 0;
+          var count = 0;
           return iter(ctx, () => {
-            ++count2;
+            ++count;
             return false;
-          }, trans, coreTable).then(() => count2);
+          }, trans, coreTable).then(() => count);
         }
       }).then(cb);
     }
@@ -1768,13 +1768,13 @@
         var ctx = this._ctx;
         if (ctx.dir === "next" && isPlainKeyRange(ctx, true) && ctx.limit > 0) {
           const { valueMapper } = ctx;
-          const index2 = getIndexOrStore(ctx, ctx.table.core.schema);
+          const index = getIndexOrStore(ctx, ctx.table.core.schema);
           return ctx.table.core.query({
             trans,
             limit: ctx.limit,
             values: true,
             query: {
-              index: index2,
+              index,
               range: ctx.range
             }
           }).then(({ result }) => valueMapper ? result.map(valueMapper) : result);
@@ -1899,13 +1899,13 @@
       var ctx = this._ctx;
       if (ctx.dir === "next" && isPlainKeyRange(ctx, true) && ctx.limit > 0) {
         return this._read((trans) => {
-          var index2 = getIndexOrStore(ctx, ctx.table.core.schema);
+          var index = getIndexOrStore(ctx, ctx.table.core.schema);
           return ctx.table.core.query({
             trans,
             values: false,
             limit: ctx.limit,
             query: {
-              index: index2,
+              index,
               range: ctx.range
             }
           });
@@ -1980,17 +1980,17 @@
         };
         return this.clone().primaryKeys().then((keys2) => {
           const nextChunk = (offset) => {
-            const count2 = Math.min(limit, keys2.length - offset);
+            const count = Math.min(limit, keys2.length - offset);
             return coreTable.getMany({
               trans,
-              keys: keys2.slice(offset, offset + count2),
+              keys: keys2.slice(offset, offset + count),
               cache: "immutable"
             }).then((values) => {
               const addValues = [];
               const putValues = [];
               const putKeys = outbound ? [] : null;
               const deleteKeys = [];
-              for (let i = 0; i < count2; ++i) {
+              for (let i = 0; i < count; ++i) {
                 const origValue = values[i];
                 const ctx2 = {
                   value: deepClone(origValue),
@@ -2031,7 +2031,7 @@
                 keys: deleteKeys,
                 criteria
               }).then((res) => applyMutateResult(deleteKeys.length, res))).then(() => {
-                return keys2.length > offset + count2 && nextChunk(offset + limit);
+                return keys2.length > offset + count && nextChunk(offset + limit);
               });
             });
           };
@@ -2049,11 +2049,11 @@
         return this._write((trans) => {
           const { primaryKey } = ctx.table.core.schema;
           const coreRange = range;
-          return ctx.table.core.count({ trans, query: { index: primaryKey, range: coreRange } }).then((count2) => {
+          return ctx.table.core.count({ trans, query: { index: primaryKey, range: coreRange } }).then((count) => {
             return ctx.table.core.mutate({ trans, type: "deleteRange", range: coreRange }).then(({ failures, lastResult, results, numFailures }) => {
               if (numFailures)
-                throw new ModifyError("Could not delete some values", Object.keys(failures).map((pos) => failures[pos]), count2 - numFailures);
-              return count2 - numFailures;
+                throw new ModifyError("Could not delete some values", Object.keys(failures).map((pos) => failures[pos]), count - numFailures);
+              return count - numFailures;
             });
           });
         });
@@ -2418,11 +2418,11 @@
     }
   };
   function createWhereClauseConstructor(db2) {
-    return makeClassConstructor(WhereClause.prototype, function WhereClause2(table, index2, orCollection) {
+    return makeClassConstructor(WhereClause.prototype, function WhereClause2(table, index, orCollection) {
       this.db = db2;
       this._ctx = {
         table,
-        index: index2 === ":id" ? null : index2,
+        index: index === ":id" ? null : index,
         or: orCollection
       };
       const indexedDB2 = db2._deps.indexedDB;
@@ -2654,7 +2654,7 @@
       primKey,
       indexes,
       mappedClass: null,
-      idxByName: arrayToObject(indexes, (index2) => [index2.name, index2])
+      idxByName: arrayToObject(indexes, (index) => [index.name, index])
     };
   }
   function safariMultiStoreFix(storeNames) {
@@ -2717,8 +2717,8 @@
                 unique: true,
                 extractKey: getKeyExtractor(keyPath)
               },
-              indexes: arrayify(store.indexNames).map((indexName) => store.index(indexName)).map((index2) => {
-                const { name, unique, multiEntry, keyPath: keyPath2 } = index2;
+              indexes: arrayify(store.indexNames).map((indexName) => store.index(indexName)).map((index) => {
+                const { name, unique, multiEntry, keyPath: keyPath2 } = index;
                 const compound2 = isArray(keyPath2);
                 const result2 = {
                   name,
@@ -2817,9 +2817,9 @@
       function openCursor2({ trans, values, query: query2, reverse, unique }) {
         return new Promise((resolve, reject) => {
           resolve = wrap(resolve);
-          const { index: index2, range } = query2;
+          const { index, range } = query2;
           const store = trans.objectStore(tableName);
-          const source = index2.isPrimaryKey ? store : store.index(index2.name);
+          const source = index.isPrimaryKey ? store : store.index(index.name);
           const direction = reverse ? unique ? "prevunique" : "prev" : unique ? "nextunique" : "next";
           const req = values || !("openKeyCursor" in source) ? source.openCursor(makeIDBKeyRange(range), direction) : source.openKeyCursor(makeIDBKeyRange(range), direction);
           req.onerror = eventRejectHandler(reject);
@@ -2894,9 +2894,9 @@
             resolve = wrap(resolve);
             const { trans, values, limit, query: query2 } = request;
             const nonInfinitLimit = limit === Infinity ? void 0 : limit;
-            const { index: index2, range } = query2;
+            const { index, range } = query2;
             const store = trans.objectStore(tableName);
-            const source = index2.isPrimaryKey ? store : store.index(index2.name);
+            const source = index.isPrimaryKey ? store : store.index(index.name);
             const idbKeyRange = makeIDBKeyRange(range);
             if (limit === 0)
               return resolve({ result: [] });
@@ -2905,7 +2905,7 @@
               req.onsuccess = (event) => resolve({ result: event.target.result });
               req.onerror = eventRejectHandler(reject);
             } else {
-              let count2 = 0;
+              let count = 0;
               const req = values || !("openKeyCursor" in source) ? source.openCursor(idbKeyRange) : source.openKeyCursor(idbKeyRange);
               const result = [];
               req.onsuccess = (event) => {
@@ -2913,7 +2913,7 @@
                 if (!cursor)
                   return resolve({ result });
                 result.push(values ? cursor.value : cursor.primaryKey);
-                if (++count2 === limit)
+                if (++count === limit)
                   return resolve({ result });
                 cursor.continue();
               };
@@ -2969,10 +2969,10 @@
         query: query(hasGetAll),
         openCursor: openCursor2,
         count({ query: query2, trans }) {
-          const { index: index2, range } = query2;
+          const { index, range } = query2;
           return new Promise((resolve, reject) => {
             const store = trans.objectStore(tableName);
-            const source = index2.isPrimaryKey ? store : store.index(index2.name);
+            const source = index.isPrimaryKey ? store : store.index(index.name);
             const idbKeyRange = makeIDBKeyRange(range);
             const req = idbKeyRange ? source.count(idbKeyRange) : source.count();
             req.onsuccess = wrap((ev) => resolve(ev.target.result));
@@ -3230,8 +3230,8 @@
       for (let j = 0; j < store.indexNames.length; ++j) {
         const idbindex = store.index(store.indexNames[j]);
         keyPath = idbindex.keyPath;
-        var index2 = createIndexSpec(idbindex.name, keyPath, !!idbindex.unique, !!idbindex.multiEntry, false, keyPath && typeof keyPath !== "string", false);
-        indexes.push(index2);
+        var index = createIndexSpec(idbindex.name, keyPath, !!idbindex.unique, !!idbindex.multiEntry, false, keyPath && typeof keyPath !== "string", false);
+        indexes.push(index);
       }
       globalSchema[storeName] = createTableSchema(storeName, primKey, indexes);
     });
@@ -3273,11 +3273,11 @@
     }
   }
   function parseIndexSyntax(primKeyAndIndexes) {
-    return primKeyAndIndexes.split(",").map((index2, indexNum) => {
-      index2 = index2.trim();
-      const name = index2.replace(/([&*]|\+\+)/g, "");
+    return primKeyAndIndexes.split(",").map((index, indexNum) => {
+      index = index.trim();
+      const name = index.replace(/([&*]|\+\+)/g, "");
       const keyPath = /^\[/.test(name) ? name.match(/^\[(.*)\]$/)[1].split("+") : name;
-      return createIndexSpec(name, keyPath || null, /\&/.test(index2), /\*/.test(index2), /\+\+/.test(index2), isArray(keyPath), indexNum === 0);
+      return createIndexSpec(name, keyPath || null, /\&/.test(index), /\*/.test(index), /\+\+/.test(index), isArray(keyPath), indexNum === 0);
     });
   }
   var Version = class {
@@ -3550,9 +3550,9 @@
       });
     });
   }
-  function pad(a, value, count2) {
+  function pad(a, value, count) {
     const result = isArray(a) ? a.slice() : [a];
-    for (let i = 0; i < count2; ++i)
+    for (let i = 0; i < count; ++i)
       result.push(value);
     return result;
   }
@@ -3588,8 +3588,8 @@
         }
         const primaryKey = addVirtualIndexes(schema.primaryKey.keyPath, 0, schema.primaryKey);
         indexLookup[":id"] = [primaryKey];
-        for (const index2 of schema.indexes) {
-          addVirtualIndexes(index2.keyPath, 0, index2);
+        for (const index of schema.indexes) {
+          addVirtualIndexes(index.keyPath, 0, index);
         }
         function findBestIndex(keyPath) {
           const result2 = indexLookup[getKeyPathAlias(keyPath)];
@@ -3605,11 +3605,11 @@
           };
         }
         function translateRequest(req) {
-          const index2 = req.query.index;
-          return index2.isVirtual ? __spreadProps(__spreadValues({}, req), {
+          const index = req.query.index;
+          return index.isVirtual ? __spreadProps(__spreadValues({}, req), {
             query: {
-              index: index2,
-              range: translateRange(req.query.range, index2.keyTail)
+              index,
+              range: translateRange(req.query.range, index.keyTail)
             }
           }) : req;
         }
@@ -4070,10 +4070,10 @@
               });
             }
           });
-          const getRange = ({ query: { index: index2, range } }) => {
+          const getRange = ({ query: { index, range } }) => {
             var _a, _b;
             return [
-              index2,
+              index,
               new RangeSet((_a = range.lower) !== null && _a !== void 0 ? _a : core.MIN_KEY, (_b = range.upper) !== null && _b !== void 0 ? _b : core.MAX_KEY)
             ];
           };
@@ -4732,91 +4732,22 @@
     profiles: "++id, contactInfo, experience, education"
   });
 
-  // src/links.js
-  var links = [
-    "https://www.linkedin.com/in/lucaspose/",
-    "https://www.linkedin.com/in/ver%C3%B3nica-cimadoro-74198b106/",
-    "https://www.linkedin.com/in/medicenvari/",
-    "https://www.linkedin.com/in/gabriel-jalil-b035b7108/",
-    "https://www.linkedin.com/in/valentinaplazasramirez-b8a805181/",
-    "https://www.linkedin.com/in/auramariaduquet/",
-    "https://www.linkedin.com/in/windyvillamizar/",
-    "https://www.linkedin.com/in/camilaalegre/"
-  ];
-
-  // src/sw.js
-  var index = 0;
-  var extract = [];
-  var count = 1;
-  var totalLinks = links.length;
-  console.log(totalLinks);
-  var scrap = async () => {
-    extract = links.slice(index, index + 5);
-    index += 5;
-    try {
-      extract.forEach(async (link) => {
-        await chrome.tabs.create({ url: link }).then((tab) => {
-          chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: ["./scripts/scrappingLinkedin.js"]
-          });
-        });
-      });
-    } catch (err) {
-      console.log(err);
-      db.delete();
-    }
-  };
-  var sendFile = async () => {
+  // src/scripts/exportDBtoJSON.js
+  console.log("hola mundo");
+  var exportDBtoJSON = async () => {
+    console.log("exportDBtoJSON");
     const profiles = await db.profiles.toArray();
-    await fetch("http://localhost:3001/saveFile", {
-      method: "POST",
-      body: JSON.stringify(profiles),
-      headers: {
-        "Content-Type": "application/json"
-      }
-    }).then((res) => res.text()).then((data) => console.log(data)).catch((err) => db.delete());
+    var blob = new Blob([JSON.stringify(profiles)], { type: "text/json" }), e = document.createEvent("MouseEvents"), a = document.createElement("a");
+    a.download = "profiles.json";
+    a.href = window.URL.createObjectURL(blob);
+    a.dataset.downloadurl = ["text/json", a.download, a.href].join(":");
+    e.initMouseEvent("click", true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+    a.dispatchEvent(e);
   };
-  var downloadFile = async () => {
-    await chrome.downloads.download({
-      url: "http://localhost:3001/download",
-      filename: "profiles.json"
-    });
+  var start = async () => {
+    await exportDBtoJSON();
+    console.log("start");
   };
-  chrome.action.onClicked.addListener(async () => {
-    try {
-      scrap();
-    } catch (err) {
-      console.log(err);
-      db.delete();
-    }
-  });
-  chrome.runtime.onConnect.addListener((port) => {
-    if (port.name === "scrapper") {
-      port.onMessage.addListener(async (message) => {
-        try {
-          db.profiles.add(message);
-          console.log(message);
-          chrome.tabs.query({ currentWindow: true, active: true }, async function(tabs) {
-            await chrome.tabs.remove(tabs[0].id);
-            count++;
-          });
-          if (count === 5 && index < totalLinks) {
-            count = 1;
-            scrap();
-          }
-          const registers = await db.profiles.count();
-          console.log(registers);
-          if (registers === totalLinks) {
-            await sendFile();
-            await downloadFile();
-            await db.delete();
-          }
-        } catch (err) {
-          console.log(err);
-          db.delete();
-        }
-      });
-    }
-  });
+  console.log("hola");
+  start();
 })();

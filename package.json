@@ -19,10 +19,13 @@
   "homepage": "https://github.com/pablopelardas/scrapping-01#readme",
   "dependencies": {
     "axios": "^0.27.2",
+    "dexie": "^3.2.2",
+    "dexie-export-import": "^1.0.3",
     "esbuild": "^0.14.47",
     "nodemon": "^2.0.18"
   },
   "devDependencies": {
-    "eslint": "^8.18.0"
+    "eslint": "^8.18.0",
+    "json-server": "^0.17.0"
   }
 }
