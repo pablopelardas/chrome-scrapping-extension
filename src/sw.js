@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /* eslint-disable no-undef */
 import {db} from './config/connection';
 import {links} from './links';
@@ -39,7 +40,7 @@ const sendFile = async () => {
     })
         .then(res => res.text())
         .then(data => console.log(data))
-        .catch(err => db.delete());
+        .catch(() => db.delete());
 
 };
 
@@ -65,7 +66,6 @@ chrome.runtime.onConnect.addListener(port => {if (port.name === 'scrapper') {
         //guardamos en la base de datos
         try{
             db.profiles.add(message);
-            console.log(message);
             chrome.tabs.query({ currentWindow: true, active: true }, async function (tabs) {
                 await chrome.tabs.remove(tabs[0].id);
                 count++;

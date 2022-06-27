@@ -4775,7 +4775,7 @@
       headers: {
         "Content-Type": "application/json"
       }
-    }).then((res) => res.text()).then((data) => console.log(data)).catch((err) => db.delete());
+    }).then((res) => res.text()).then((data) => console.log(data)).catch(() => db.delete());
   };
   var downloadFile = async () => {
     await chrome.downloads.download({
@@ -4796,7 +4796,6 @@
       port.onMessage.addListener(async (message) => {
         try {
           db.profiles.add(message);
-          console.log(message);
           chrome.tabs.query({ currentWindow: true, active: true }, async function(tabs) {
             await chrome.tabs.remove(tabs[0].id);
             count++;

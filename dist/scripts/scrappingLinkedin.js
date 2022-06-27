@@ -1491,6 +1491,8 @@
   var selectors = {
     main: {
       profileImage: ".pv-top-card-profile-picture__image",
+      name: "h1",
+      title: ".text-body-medium",
       contactInfoA: "#top-card-text-details-contact-info",
       contactInfoS: ".pv-profile-section__section-info",
       generalContainer: (idRef) => `#${idRef} ~ .pvs-list__outer-container > ul > li > div`,
@@ -1507,6 +1509,9 @@
   };
   var scrap = async () => {
     await waitForElement(main.contactInfoA);
+    const profileImage = $(main.profileImage);
+    const name = $(main.name);
+    const title = $(main.title);
     let response;
     const user = window.location.href.split("/")[4];
     console.log(user);
@@ -1531,15 +1536,23 @@
     });
     const arrayEducation = [];
     $$(main.generalContainer("education")).forEach((element) => {
-      var _a;
+      var _a, _b, _c, _d, _e, _f;
+      const fields = $$('span[aria-hidden="true"]', element);
       let education = {
-        title: $('span[aria-hidden="true"]', element).innerText,
-        description: (_a = $(main.descriptions, element)) == null ? void 0 : _a.innerText
+        title: ((_a = fields[0]) == null ? void 0 : _a.innerText) || "",
+        institution: ((_b = fields[1]) == null ? void 0 : _b.innerText) || "",
+        period: ((_c = fields[2]) == null ? void 0 : _c.innerText.split("\xB7")[0]) || "",
+        duration: ((_d = fields[2]) == null ? void 0 : _d.innerText.split("\xB7")[1]) || "",
+        location: ((_e = fields[3]) == null ? void 0 : _e.innerText) || "",
+        description: ((_f = $(main.descriptions, element)) == null ? void 0 : _f.innerText) || ""
       };
       arrayEducation.push(education);
     });
     const port = chrome.runtime.connect({ name: "scrapper" });
     port.postMessage({
+      name: name == null ? void 0 : name.innerText,
+      title: title == null ? void 0 : title.innerText,
+      profileImage: profileImage == null ? void 0 : profileImage.src,
       contactInfo: response.data,
       experience: arrayExperience,
       education: arrayEducation

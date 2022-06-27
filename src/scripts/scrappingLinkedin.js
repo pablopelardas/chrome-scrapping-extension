@@ -14,6 +14,11 @@ const resolveIsReady = async () => {
 
 const scrap = async () => {
     await waitForElement(main.contactInfoA);
+
+    const profileImage = $(main.profileImage);
+    const name = $(main.name);
+    const title = $(main.title);
+
     let response;
     const user = window.location.href.split('/')[4];
     console.log(user);
@@ -41,9 +46,14 @@ const scrap = async () => {
     const arrayEducation = [];
     //Educación
     $$(main.generalContainer('education')).forEach(element => {
+        const fields =($$('span[aria-hidden="true"]', element));
         let education = {
-            title: $('span[aria-hidden="true"]', element).innerText,
-            description: $(main.descriptions, element)?.innerText,
+            title: fields[0]?.innerText || '',
+            institution: fields[1]?.innerText || '',
+            period: fields[2]?.innerText.split('·')[0] || '',
+            duration: fields[2]?.innerText.split('·')[1] || '',
+            location: fields[3]?.innerText || '',
+            description: $(main.descriptions, element)?.innerText || '',
         };
         arrayEducation.push(education);
     });
@@ -51,6 +61,9 @@ const scrap = async () => {
     // eslint-disable-next-line no-undef
     const port = chrome.runtime.connect({name: 'scrapper'});
     port.postMessage({
+        name: name?.innerText,
+        title: title?.innerText,
+        profileImage: profileImage?.src,
         contactInfo: response.data,
         experience: arrayExperience,
         education: arrayEducation
