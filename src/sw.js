@@ -1,13 +1,42 @@
 /* eslint-disable no-console */
 /* eslint-disable no-undef */
 import {db} from './config/connection';
-import {links} from './links';
-
 let index = 0;
+let page = 1;
 let extract = [];
 let count = 1;
-let totalLinks = links.length;
-console.log(totalLinks);
+let links = [];
+let keyword = '';
+
+
+const goToUrl = async (url, tab) => {
+    await chrome.tabs.update({ url });
+    return new Promise(resolve => {
+        chrome.tabs.onUpdated.addListener(function (tabId, changeInfo) {
+            if (tabId === tab.id && changeInfo.status === 'complete') {
+                resolve(tabId);
+            }
+        });
+    });
+
+};
+
+const getCandidates = async (key, page) => {
+ 
+    chrome.tabs.query({ currentWindow: true, active: true }, async function (tabs) {
+        goToUrl(`https://www.linkedin.com/search/results/people/?keywords=${key}&origin=CLUSTER_EXPANSION&page=${page}&sid=yUQ`, tabs[0]).then((tabId) => {
+            chrome.scripting.executeScript(
+                {
+                    target: {tabId},
+                    files: ['./scripts/scrapping.candidates.js'],
+                }
+            );
+        });
+        
+    });
+
+    
+};
 
 const scrap = async () => {
     extract = links.slice(index, index + 5);
@@ -51,16 +80,6 @@ const downloadFile = async () => {
     });
 };
 
-chrome.action.onClicked.addListener(async () => {
-    try{
-        scrap();
-    }catch(err){
-        console.log(err);
-        db.delete();
-    }
-});
-
-
 chrome.runtime.onConnect.addListener(port => {if (port.name === 'scrapper') {
     port.onMessage.addListener(async message => {
         //guardamos en la base de datos
@@ -70,13 +89,13 @@ chrome.runtime.onConnect.addListener(port => {if (port.name === 'scrapper') {
                 await chrome.tabs.remove(tabs[0].id);
                 count++;
             });
-            if (count === 5 && index < totalLinks) {
+            if (count === 5 && index < links.length) {
                 count = 1;
                 scrap();
             }
             const registers = await db.profiles.count();
             console.log(registers);
-            if (registers === totalLinks) {
+            if (registers === links.length) {
                 await sendFile();
                 await downloadFile();
                 await db.delete();
@@ -89,4 +108,28 @@ chrome.runtime.onConnect.addListener(port => {if (port.name === 'scrapper') {
     );
 }});
 
-
+chrome.runtime.onConnect.addListener(port => {if (port.name === 'scrapHtml') {
+    port.onMessage.addListener(async message => {
+        keyword = message.key;
+        max_pages = message.max_pages;
+        await getCandidates(keyword, page);
+        page++;
+    });
+}});
+chrome.runtime.onConnect.addListener(port => {if (port.name === 'scrapCandidates') {
+    port.onMessage.addListener(async message => {
+        links = [...links, ...message.urls];  
+        if (page < max_pages) {
+            await getCandidates(keyword, page);
+            page++;
+        }
+        else {
+            try{
+                scrap();
+            }catch(err){
+                console.log(err);
+                db.delete();
+            }
+        }
+    });
+}});

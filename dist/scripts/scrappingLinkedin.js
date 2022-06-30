@@ -1502,6 +1502,18 @@
 
   // src/scripts/scrappingLinkedin.js
   var import_axios = __toESM(require_axios2());
+
+  // src/utils/keysBy.js
+  function keysBy(array) {
+    const finalObject = {};
+    array.forEach((element) => {
+      const [key, value] = element.trim().split("=");
+      finalObject[key] = value.replace(/"/g, "");
+    });
+    return finalObject;
+  }
+
+  // src/scripts/scrappingLinkedin.js
   var { main } = selectors;
   var resolveIsReady = async () => {
     await waitForElement(main.profileImage);
@@ -1509,15 +1521,15 @@
   };
   var scrap = async () => {
     await waitForElement(main.contactInfoA);
+    const cookies = keysBy(document.cookie.split(";"));
     const profileImage = $(main.profileImage);
     const name = $(main.name);
     const title = $(main.title);
     let response;
     const user = window.location.href.split("/")[4];
-    console.log(user);
     response = await (0, import_axios.default)(`https://www.linkedin.com/voyager/api/identity/profiles/${user}/profileContactInfo`, {
       headers: {
-        "csrf-token": "ajax:8655455109788390906"
+        "csrf-token": cookies["JSESSIONID"]
       }
     });
     const arrayExperience = [];

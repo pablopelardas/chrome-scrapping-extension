@@ -6,7 +6,8 @@
     "service_worker": "sw.js"
   },
   "action": {
-    "deffault_title": "Click Me"
+    "deffault_title": "Click Me",
+    "default_popup": "popup.html"
   },
   "permissions": [
     "tabs",

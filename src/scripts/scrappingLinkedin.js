@@ -5,6 +5,7 @@ import { selectors } from './scrapper.config';
 const {main} = selectors;
 import axios from 'axios';
 import {$, $$ } from '../utils/selectors';
+import { keysBy } from '../utils/keysBy';
 
 const resolveIsReady = async () => {
     await waitForElement(main.profileImage);
@@ -14,17 +15,16 @@ const resolveIsReady = async () => {
 
 const scrap = async () => {
     await waitForElement(main.contactInfoA);
-
+    const cookies = keysBy(document.cookie.split(';'));
     const profileImage = $(main.profileImage);
     const name = $(main.name);
     const title = $(main.title);
 
     let response;
     const user = window.location.href.split('/')[4];
-    console.log(user);
     response = await axios(`https://www.linkedin.com/voyager/api/identity/profiles/${user}/profileContactInfo`,{
         headers:{
-            'csrf-token': 'ajax:8655455109788390906'
+            'csrf-token': cookies['JSESSIONID'],
         }
     });
 

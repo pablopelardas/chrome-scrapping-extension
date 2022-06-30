@@ -4732,24 +4732,33 @@
     profiles: "++id, contactInfo, experience, education"
   });
 
-  // src/links.js
-  var links = [
-    "https://www.linkedin.com/in/lucaspose/",
-    "https://www.linkedin.com/in/ver%C3%B3nica-cimadoro-74198b106/",
-    "https://www.linkedin.com/in/medicenvari/",
-    "https://www.linkedin.com/in/gabriel-jalil-b035b7108/",
-    "https://www.linkedin.com/in/valentinaplazasramirez-b8a805181/",
-    "https://www.linkedin.com/in/auramariaduquet/",
-    "https://www.linkedin.com/in/windyvillamizar/",
-    "https://www.linkedin.com/in/camilaalegre/"
-  ];
-
   // src/sw.js
   var index = 0;
+  var page = 1;
   var extract = [];
   var count = 1;
-  var totalLinks = links.length;
-  console.log(totalLinks);
+  var links = [];
+  var keyword = "";
+  var goToUrl = async (url, tab) => {
+    await chrome.tabs.update({ url });
+    return new Promise((resolve) => {
+      chrome.tabs.onUpdated.addListener(function(tabId, changeInfo) {
+        if (tabId === tab.id && changeInfo.status === "complete") {
+          resolve(tabId);
+        }
+      });
+    });
+  };
+  var getCandidates = async (key, page2) => {
+    chrome.tabs.query({ currentWindow: true, active: true }, async function(tabs) {
+      goToUrl(`https://www.linkedin.com/search/results/people/?keywords=${key}&origin=CLUSTER_EXPANSION&page=${page2}&sid=yUQ`, tabs[0]).then((tabId) => {
+        chrome.scripting.executeScript({
+          target: { tabId },
+          files: ["./scripts/scrapping.candidates.js"]
+        });
+      });
+    });
+  };
   var scrap = async () => {
     extract = links.slice(index, index + 5);
     index += 5;
@@ -4783,14 +4792,6 @@
       filename: "profiles.json"
     });
   };
-  chrome.action.onClicked.addListener(async () => {
-    try {
-      scrap();
-    } catch (err) {
-      console.log(err);
-      db.delete();
-    }
-  });
   chrome.runtime.onConnect.addListener((port) => {
     if (port.name === "scrapper") {
       port.onMessage.addListener(async (message) => {
@@ -4800,13 +4801,13 @@
             await chrome.tabs.remove(tabs[0].id);
             count++;
           });
-          if (count === 5 && index < totalLinks) {
+          if (count === 5 && index < links.length) {
             count = 1;
             scrap();
           }
           const registers = await db.profiles.count();
           console.log(registers);
-          if (registers === totalLinks) {
+          if (registers === links.length) {
             await sendFile();
             await downloadFile();
             await db.delete();
@@ -4814,6 +4815,34 @@
         } catch (err) {
           console.log(err);
           db.delete();
+        }
+      });
+    }
+  });
+  chrome.runtime.onConnect.addListener((port) => {
+    if (port.name === "scrapHtml") {
+      port.onMessage.addListener(async (message) => {
+        keyword = message.key;
+        max_pages = message.max_pages;
+        await getCandidates(keyword, page);
+        page++;
+      });
+    }
+  });
+  chrome.runtime.onConnect.addListener((port) => {
+    if (port.name === "scrapCandidates") {
+      port.onMessage.addListener(async (message) => {
+        links = [...links, ...message.urls];
+        if (page < max_pages) {
+          await getCandidates(keyword, page);
+          page++;
+        } else {
+          try {
+            scrap();
+          } catch (err) {
+            console.log(err);
+            db.delete();
+          }
         }
       });
     }
